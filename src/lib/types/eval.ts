@@ -15,3 +15,21 @@ export interface EvalProgress {
 	output: string[];
 	elapsedSeconds: number;
 }
+
+export interface EvalPreview {
+	success: boolean;
+	description: string;
+	testCount: number;
+	modelCount: number;
+	models: string[];
+	estimatedTime: number;
+	estimatedCost: string;
+	estimatedTokens: number;
+	cacheEnabled: boolean;
+	tests?: Array<{
+		description: string;
+		prompt: string;
+		assertionCount: number;
+	}>;
+	error?: string;
+}

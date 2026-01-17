@@ -9,6 +9,6 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div data-theme="garden">
+<div data-theme="garden" class="min-h-screen bg-neutral w-full">
 	{@render children()}
 </div>
