@@ -1,110 +1,38 @@
-# Promptfoo Runner UI
+# sv
 
-A simple web UI for configuring and running Promptfoo LLM evaluations.
+Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
-## Status
+## Creating a project
 
-**Work in Progress** - Currently just the CLI runner is functional. Web UI coming soon.
+If you're seeing this, you've probably already done this step. Congrats!
 
-## What Works Now
+```sh
+# create a new project in the current directory
+npx sv create
 
-### CLI Runner Script
-
-The `run-eval.ts` script provides a simplified interface for running Promptfoo evals with multiple modes:
-
-```bash
-npm run eval:run -- smoke              # Quick 5-test smoke test
-npm run eval:run -- model xiaomi       # All tests on one model
-npm run eval:run -- full               # Full suite (all tests, all models)
-npm run eval:run -- pattern "incomplete"  # Filter by pattern
-npm run eval:run -- first 10           # First N tests
-npm run eval:run -- retry              # Retry failures
-npm run eval:run -- report             # Open latest HTML report
+# create a new project in my-app
+npx sv create my-app
 ```
 
-**Features:**
-- Multiple run modes (smoke, model, full, pattern, first, retry)
-- Automatic HTML report generation with timestamps
-- Auto-open reports in browser after completion
-- Dry-run preview mode
-- Report management (list, open latest)
-- Progress indicators and result summaries
+## Developing
 
-## Setup
+Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
-### Prerequisites
+```sh
+npm run dev
 
-1. **Promptfoo config and test scenarios**
-   - You need to provide your own `tests/llm-evals/promptfoo.config.ts`
-   - You need to provide your own `tests/llm-evals/prompts.ts`
-   - See [Promptfoo docs](https://www.promptfoo.dev/docs/getting-started/) for setup
-
-2. **Environment variables**
-   - Create `.env` file with your API keys:
-     ```
-     OPENROUTER_API_KEY=your_key_here
-     ```
-
-3. **Dependencies**
-   ```bash
-   npm install
-   ```
-
-### Installation
-
-```bash
-git clone <repo>
-cd promptfoo-runner-ui
-npm install
+# or start the server and open the app in a new browser tab
+npm run dev -- --open
 ```
 
-### Running Evals
+## Building
 
-```bash
-# Smoke test
-npm run eval:run -- smoke
+To create a production version of your app:
 
-# Test specific model
-npm run eval:run -- model gemini
-
-# Full suite
-npm run eval:run -- full
-
-# View latest report
-npm run eval:report
+```sh
+npm run build
 ```
 
-## Project Structure
+You can preview the production build with `npm run preview`.
 
-```
-promptfoo-runner-ui/
-├── docs/
-│   └── eval-ui-roadmap.md     # Development roadmap
-├── scripts/
-│   └── run-eval.ts            # CLI runner (working)
-├── tests/
-│   └── llm-evals/
-│       ├── promptfoo.config.ts  # Your config (not included)
-│       ├── prompts.ts           # Your prompts (not included)
-│       └── reports/             # Generated HTML reports
-├── package.json
-└── README.md
-```
-
-## What's Next
-
-See [docs/eval-ui-roadmap.md](docs/eval-ui-roadmap.md) for the full development plan.
-
-**Phase 1 - Web UI (Coming Soon):**
-- Single-page form for run configuration
-- Real-time progress display
-- Results summary with links to HTML reports
-- No framework chosen yet - TBD
-
-## Contributing
-
-This is a work in progress. The CLI runner is stable and working. The web UI is planned but not started yet.
-
-## License
-
-MIT
+> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.

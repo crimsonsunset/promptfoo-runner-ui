@@ -1,14 +1,25 @@
-node_modules/
-.env
-.idea
+node_modules
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+
+# OS
 .DS_Store
+Thumbs.db
+.idea
 
-# Eval artifacts
-tests/llm-evals/output.json
-tests/llm-evals/reports/
-tests/llm-evals/.promptfoo/
 
-# User-provided files (not part of this repo)
-tests/llm-evals/promptfoo.config.ts
-tests/llm-evals/prompts.ts
-tests/llm-evals/scenarios/
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

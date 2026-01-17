@@ -80,11 +80,11 @@ When complete, show:
 ## Technical Architecture
 
 ### Stack
-**TBD** - No frontend stack chosen yet. Options:
-- Next.js + React
-- Remix
-- SvelteKit
-- Vanilla HTML/JS
+**SvelteKit + DaisyUI + Superforms + Zod**
+- **Framework**: SvelteKit (SSR, form actions, progressive enhancement)
+- **Styling**: DaisyUI with garden theme (lightweight, CSS-only components)
+- **Form Handling**: Superforms (server + client validation, type-safe)
+- **Validation**: Zod (schema validation, type inference)
 
 ### Backend
 ```
@@ -140,12 +140,12 @@ tests/llm-evals/
 - [x] Report management commands
 
 ### 🔜 To Build
-- [ ] Frontend framework selection
-- [ ] Web UI for run configuration
-- [ ] API endpoint for executing evals
-- [ ] Real-time progress streaming
-- [ ] Results display component
-- [ ] Report viewing integration
+- [x] Frontend framework selection (SvelteKit + DaisyUI + Superforms)
+- [x] Web UI for run configuration
+- [x] Form actions for executing evals
+- [ ] Real-time progress streaming (future enhancement)
+- [x] Results display component
+- [x] Report viewing integration
 
 ---
 
@@ -279,8 +279,8 @@ tests/llm-evals/
 
 ## Open Questions
 
-- [ ] What frontend framework to use?
-- [ ] How to handle authentication (if any)?
-- [ ] Should it be a local-only tool or deployable web app?
-- [ ] How to handle concurrent eval executions?
-- [ ] Should we bundle promptfoo or require it as peer dependency?
+- [x] What frontend framework to use? **SvelteKit + DaisyUI + Superforms**
+- [ ] How to handle authentication (if any)? (Not needed for MVP)
+- [x] Should it be a local-only tool or deployable web app? **Local-only for MVP**
+- [ ] How to handle concurrent eval executions? (Future enhancement - queue system)
+- [x] Should we bundle promptfoo or require it as peer dependency? **Peer dependency**
