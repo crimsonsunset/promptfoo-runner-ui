@@ -255,15 +255,20 @@ export const actions: Actions = {
 	},
 	
 	preview: async ({ request }) => {
+		console.log('=== PREVIEW ACTION CALLED ===');
 		const form = await superValidate(request, zod(evalFormSchema as any));
+		console.log('Form data:', form.data);
+		console.log('Form valid:', form.valid);
 
 		if (!form.valid) {
+			console.log('Form validation failed:', form.errors);
 			return { form };
 		}
 
 		// Additional custom validation
 		const validationErrors = validateEvalForm(form.data as EvalFormSchema);
 		if (validationErrors) {
+			console.log('Custom validation errors:', validationErrors);
 			Object.entries(validationErrors).forEach(([field, msgs]) => {
 				(form.errors as any)[field] = msgs;
 			});
@@ -272,6 +277,7 @@ export const actions: Actions = {
 		}
 
 		const preview = getPreviewInfo(form.data as EvalFormSchema);
+		console.log('Generated preview:', preview);
 		
 		return {
 			form,
