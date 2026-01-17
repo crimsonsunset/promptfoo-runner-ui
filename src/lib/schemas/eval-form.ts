@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MODEL_OPTIONS, isValidModel } from '$lib/constants/models';
+import { MODEL_OPTIONS, isValidModel } from '$lib/constants/models.constants';
 
 export { MODEL_OPTIONS };
 

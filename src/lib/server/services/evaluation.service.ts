@@ -11,19 +11,20 @@ import type { EvalResult, EvalPreview } from '$lib/types/eval';
 import type { EvalFormSchema } from '$lib/schemas/eval-form';
 import { appConfig } from '../../../../app.config.js';
 import { estimateRunConfiguration, getModelsForRunType } from '$lib/utils/estimations';
-import { MODEL_DISPLAY_NAMES } from '$lib/constants/models';
+import { MODEL_DISPLAY_NAMES } from '$lib/constants/models.constants';
 import { ErrorCodes, createEvaluationError } from '$lib/utils/error-handling';
 import {
 	PROJECT_ROOT,
 	REPORTS_DIR,
 	OUTPUT_JSON_PATH,
 	SCRIPTS_DIR,
-	PROMPTFOO_CONFIG_PATH
-} from '$lib/constants/paths';
-import { EXECUTABLES, COMMANDS, CLI_FLAGS } from '$lib/constants/cli';
-import { PROMPT_MARKERS, PARSING_PATTERNS } from '$lib/constants/parsing';
-import { FILE_EXTENSIONS } from '$lib/constants/files';
-import { UI_DEFAULTS } from '$lib/constants/ui';
+	PROMPTFOO_CONFIG_PATH,
+	FILE_EXTENSIONS,
+	PROMPT_MARKERS,
+	PARSING_PATTERNS
+} from '$lib/constants/app.constants';
+import { EXECUTABLES, COMMANDS, CLI_FLAGS } from '$lib/constants/cli.constants';
+import { UI_DEFAULTS } from '$lib/constants/ui.constants';
 
 /**
  * Build command arguments from form data

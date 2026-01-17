@@ -10,8 +10,8 @@ import { validateEnvironment } from '$lib/utils/env-validation';
 import { evalManager } from '$lib/server/eval-manager';
 import { evaluationService } from '$lib/server/services/evaluation.service';
 import { ErrorCodes, createEvaluationError } from '$lib/utils/error-handling';
-import { PROJECT_ROOT, SCRIPTS_DIR } from '$lib/constants/paths';
-import { EXECUTABLES } from '$lib/constants/cli';
+import { PROJECT_ROOT, SCRIPTS_DIR } from '$lib/constants/app.constants';
+import { EXECUTABLES } from '$lib/constants/cli.constants';
 
 export const load: PageServerLoad = async () => {
 	// Validate environment on server load

@@ -5,7 +5,7 @@
 
 import type { EvalFormSchema } from '$lib/schemas/eval-form';
 import { appConfig } from '../../../app.config.js';
-import { ALL_MODELS, type ModelOption } from '$lib/constants/models';
+import { ALL_MODELS, type ModelOption } from '$lib/constants/models.constants';
 
 export interface EstimationResult {
 	testCount: number;

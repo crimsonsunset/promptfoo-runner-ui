@@ -1,4 +1,4 @@
-import { REQUIRED_ENV_VAR_NAMES, REQUIRED_ENV_VARS } from '$lib/constants/environment.js';
+import { REQUIRED_ENV_VAR_NAMES, REQUIRED_ENV_VARS } from '$lib/constants/app.constants.js';
 
 /**
  * Validates required environment variables are present

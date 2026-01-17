@@ -6,7 +6,7 @@
 		type EvalFormSchema,
 		MODEL_OPTIONS
 	} from '$lib/schemas/eval-form';
-	import { getModelDisplayName } from '$lib/constants/models';
+	import { getModelDisplayName } from '$lib/constants/models.constants';
 	import type { PageData } from './$types';
 	import type { EvalPreview, EvalResult } from '$lib/types/eval';
 	import EvalPreviewComponent from '$lib/components/EvalPreview.svelte';
