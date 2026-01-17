@@ -10,6 +10,8 @@
 	import type { PageData } from './$types';
 	import type { EvalPreview, EvalResult } from '$lib/types/eval';
 	import EvalPreviewComponent from '$lib/components/EvalPreview.svelte';
+	import { debounce } from '$lib/utils/debounce';
+	import { appConfig } from '../../app.config.js';
 
 	let { data = $bindable() }: { data: PageData } = $props();
 
@@ -35,24 +37,15 @@
 			}
 		},
 		onResult: ({ result }) => {
-			console.log('=== FORM RESULT RECEIVED ===');
-			console.log('Result type:', result.type);
-			console.log('Result data:', result.data);
-			
 			if (result.type === 'success') {
 				if (result.data?.result) {
-					console.log('Setting evalResult:', result.data.result);
 					evalResult = result.data.result as EvalResult;
 					evalPreview = null;
 				} else if (result.data?.preview) {
-					console.log('Setting evalPreview:', result.data.preview);
 					evalPreview = result.data.preview as EvalPreview;
 					evalResult = null;
-				} else {
-					console.log('Success but no result or preview data');
 				}
 			} else if (result.type === 'failure') {
-				console.log('Result failure:', result);
 				evalResult = {
 					success: false,
 					error: 'Failed to execute evaluation. Please try again.'
@@ -70,76 +63,69 @@
 	let evalResult = $state<EvalResult | null>(null);
 	let evalPreview = $state<EvalPreview | null>(null);
 	let isRunning = $derived($submitting);
+	let isLoadingPreview = $state(false);
 
+	async function updatePreview() {
+		isLoadingPreview = true;
+		try {
+			const formData = new FormData();
+			formData.append('runType', $form.runType || appConfig.defaultRunType);
+			if ($form.modelName) formData.append('modelName', $form.modelName);
+			if ($form.pattern) formData.append('pattern', $form.pattern);
+			if ($form.count) formData.append('count', $form.count.toString());
+			formData.append('noCache', String($form.noCache));
+			formData.append('verbose', String($form.verbose));
+			formData.append('noHtml', String($form.noHtml));
+
+			const response = await fetch('?/preview', {
+				method: 'POST',
+				body: formData
+			});
+
+			const result = await response.json();
+			if (result.type === 'success' && result.data?.preview) {
+				evalPreview = result.data.preview as EvalPreview;
+			}
+		} catch (error) {
+			// Silently fail - preview is optional
+		} finally {
+			isLoadingPreview = false;
+		}
+	}
+
+	// Debounced preview updater
+	const debouncedUpdatePreview = debounce(updatePreview, appConfig.previewDebounceMs);
+
+	// Auto-update preview when form changes (debounced)
 	$effect(() => {
-		if ($submitting && !evalResult) {
-			const timeout = setTimeout(() => {
-				if ($submitting && !evalResult) {
-					console.log('Form appears stuck in submitting state, resetting...');
-					reset();
-				}
-			}, 1000);
+		// Watch form changes
+		const _ = $form.runType + $form.modelName + $form.pattern + String($form.count);
 
-			return () => clearTimeout(timeout);
+		if (!isRunning && !evalResult) {
+			debouncedUpdatePreview();
 		}
 	});
 
-	function forceReset() {
-		reset();
+	function resetForm(force = false) {
+		if (force) {
+			// Hard reset - reload page to clear any stuck state
+			window.location.href = window.location.href.split('?')[0];
+			return;
+		}
+
+		// Normal reset
 		evalResult = null;
 		evalPreview = null;
-		$form.runType = 'smoke';
+		reset();
+
+		// Reset to defaults from config
+		$form.runType = appConfig.defaultRunType;
 		$form.modelName = undefined;
 		$form.pattern = undefined;
 		$form.count = undefined;
-		$form.noCache = false;
-		$form.verbose = false;
-		$form.noHtml = false;
-		window.location.href = window.location.href.split('?')[0];
-	}
-
-	const estimatedInfo = $derived(getEstimatedInfo());
-
-	function getEstimatedInfo() {
-		const runType = $form.runType;
-		let testCount = 0;
-		let modelCount = 1;
-		let timeEstimate = 0;
-
-		switch (runType) {
-			case 'smoke':
-				testCount = 5;
-				modelCount = 1;
-				timeEstimate = 25;
-				break;
-			case 'model':
-				testCount = 236;
-				modelCount = 1;
-				timeEstimate = testCount * 5;
-				break;
-			case 'full':
-				testCount = 236;
-				modelCount = 4;
-				timeEstimate = testCount * modelCount * 5;
-				break;
-			case 'pattern':
-				testCount = 10;
-				modelCount = 4;
-				timeEstimate = testCount * modelCount * 5;
-				break;
-			case 'first':
-				testCount = ($form.count as number) ?? 10;
-				modelCount = $form.modelName ? 1 : 4;
-				timeEstimate = testCount * modelCount * 5;
-				break;
-			case 'retry':
-				testCount = 10;
-				modelCount = 4;
-				timeEstimate = testCount * modelCount * 5;
-				break;
-		}
-
-		return { testCount, modelCount, timeEstimate };
+		$form.noCache = !appConfig.defaultCache;
+		$form.verbose = appConfig.defaultVerbose;
+		$form.noHtml = appConfig.defaultNoHtml;
 	}
 
 	function getModelDisplayName(model: string): string {
@@ -151,19 +137,6 @@
 		};
 		return displayNames[model] || model;
 	}
-
-	function resetForm() {
-		evalResult = null;
-		evalPreview = null;
-		reset();
-		$form.runType = 'smoke';
-		$form.modelName = undefined;
-		$form.pattern = undefined;
-		$form.count = undefined;
-		$form.noCache = false;
-		$form.verbose = false;
-		$form.noHtml = false;
-	}
 </script>
 
 <svelte:head>
@@ -171,8 +144,8 @@
 </svelte:head>
 
 <div class="min-h-screen w-full flex items-center justify-center p-6">
-	<div class="w-full {evalPreview ? 'max-w-7xl' : 'max-w-4xl'}">
-		<div class="grid {evalPreview ? 'grid-cols-2' : 'grid-cols-1'} gap-6">
+	<div class="w-full max-w-7xl">
+		<div class="grid grid-cols-2 gap-6">
 			<!-- Main Form Card -->
 			<div class="card bg-base-100 shadow-xl">
 				<div class="card-body">
@@ -214,7 +187,7 @@
 									<div class="text-sm text-error">{evalResult.error}</div>
 								{/if}
 							</div>
-							<button class="btn btn-sm btn-ghost" onclick={resetForm}>Run Another</button>
+							<button class="btn btn-sm btn-ghost" onclick={() => resetForm()}>Run Another</button>
 						</div>
 					{:else if isRunning}
 						<div class="alert alert-info mb-6">
@@ -224,7 +197,7 @@
 								<p class="text-sm">This may take several minutes. Please wait...</p>
 								<p class="text-xs opacity-70 mt-1">If stuck, click Cancel to reset</p>
 							</div>
-							<button class="btn btn-sm btn-ghost" onclick={forceReset}>Cancel</button>
+							<button class="btn btn-sm btn-ghost" onclick={() => resetForm(true)}>Cancel</button>
 						</div>
 					{/if}
 
@@ -249,9 +222,9 @@
 									<option value="retry">Retry - Retry failures from last run</option>
 								</select>
 								{#if $errors.runType}
-									<label class="label">
+									<div class="label">
 										<span class="label-text-alt text-error">{$errors.runType}</span>
-									</label>
+									</div>
 								{/if}
 							</div>
 
@@ -365,83 +338,43 @@
 								</label>
 							</div>
 
-							<!-- Estimated Info Card -->
-							<div class="card bg-base-200 shadow">
-								<div class="card-body">
-									<h2 class="card-title text-lg">Estimated</h2>
-									<div class="grid grid-cols-2 gap-4">
-										<div>
-											<p class="text-sm opacity-70">Tests</p>
-											<p class="text-xl font-bold">{estimatedInfo.testCount}</p>
-										</div>
-										<div>
-											<p class="text-sm opacity-70">Models</p>
-											<p class="text-xl font-bold">{estimatedInfo.modelCount}</p>
-										</div>
-										<div>
-											<p class="text-sm opacity-70">Time</p>
-											<p class="text-xl font-bold">~{estimatedInfo.timeEstimate}s</p>
-										</div>
-										<div>
-											<p class="text-sm opacity-70">Cost</p>
-											<p class="text-xl font-bold">Free</p>
-										</div>
-									</div>
-									{#if $form.runType === 'full'}
-										<div class="alert alert-warning mt-4">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="stroke-current shrink-0 h-6 w-6"
-												fill="none"
-												viewBox="0 0 24 24"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-												/>
-											</svg>
-											<span class="text-sm">Warning: Full suite runs 236 evaluations</span>
-										</div>
-									{/if}
-								</div>
-							</div>
-
-							<!-- Submit Buttons -->
+							<!-- Submit Button -->
 							<div class="form-control mt-6">
-								<div class="flex gap-3">
-									<button
-										type="submit"
-										formaction="?/preview"
-										class="btn btn-outline btn-lg flex-1"
-										disabled={isRunning}
-									>
-										👁 Preview
-									</button>
-									<button
-										type="submit"
-										formaction="?/run"
-										class="btn btn-primary btn-lg flex-[2]"
-										disabled={isRunning}
-									>
-										{#if isRunning}
-											<span class="loading loading-spinner loading-sm"></span>
-											Running Evaluation...
-										{:else}
-											▶ Run Evaluation
-										{/if}
-									</button>
-								</div>
+								<button
+									type="submit"
+									formaction="?/run"
+									class="btn btn-primary btn-lg w-full"
+									disabled={isRunning}
+								>
+									{#if isRunning}
+										<span class="loading loading-spinner loading-sm"></span>
+										Running Evaluation...
+									{:else}
+										▶ Run Evaluation
+									{/if}
+								</button>
 							</div>
 						</div>
 					</form>
 				</div>
 			</div>
 
-			<!-- Preview Sidebar -->
+			<!-- Preview Sidebar (Always Visible) -->
 			{#if evalPreview}
-				<EvalPreviewComponent preview={evalPreview} onClose={resetForm} />
+				<EvalPreviewComponent preview={evalPreview} />
+			{:else}
+				<div class="card bg-base-200 shadow-xl h-fit">
+					<div class="card-body">
+						<h2 class="card-title text-2xl">👁 Preview</h2>
+						<div class="flex items-center justify-center py-12">
+							{#if isLoadingPreview}
+								<span class="loading loading-spinner loading-lg"></span>
+							{:else}
+								<p class="text-sm opacity-70">Select options to see preview</p>
+							{/if}
+						</div>
+					</div>
+				</div>
 			{/if}
 		</div>
 	</div>

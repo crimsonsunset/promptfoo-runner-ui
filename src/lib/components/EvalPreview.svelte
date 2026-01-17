@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { EvalPreview } from '$lib/types/eval';
 
-	let { preview, onClose }: { preview: EvalPreview; onClose: () => void } = $props();
+	let { preview }: { preview: EvalPreview } = $props();
 
 	function extractPromptPreview(prompt: string): { venue?: string; userSays?: string; charCount: number } {
 		const lines = prompt.split('\n');
@@ -18,9 +18,8 @@
 
 <div class="card bg-base-200 shadow-xl h-fit max-h-[calc(100vh-8rem)] flex flex-col">
 	<div class="card-body flex-1 overflow-hidden flex flex-col">
-		<div class="flex items-start justify-between mb-4 flex-shrink-0">
+		<div class="mb-4 flex-shrink-0">
 			<h2 class="card-title text-2xl">👁 Preview</h2>
-			<button class="btn btn-sm btn-circle btn-ghost" onclick={onClose}>✕</button>
 		</div>
 
 		<div class="space-y-6 overflow-y-auto flex-1">

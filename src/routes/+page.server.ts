@@ -7,13 +7,16 @@ import { fileURLToPath } from 'url';
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import type { Actions, PageServerLoad } from './$types';
 import type { EvalResult, EvalPreview } from '$lib/types/eval';
+import { appConfig } from '../../app.config.js';
+import { validateEnvironment, getOpenRouterApiKey } from '$lib/utils/env-validation';
+import { evalManager } from '$lib/server/eval-manager';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = join(__dirname, '..', '..');
 const EVALS_DIR = PROJECT_ROOT; // Config is at root
-const REPORTS_DIR = join(PROJECT_ROOT, 'tests/llm-evals/reports');
-const OUTPUT_JSON = join(PROJECT_ROOT, 'tests/llm-evals/output.json');
+const REPORTS_DIR = join(PROJECT_ROOT, appConfig.reportsDir.replace(/^\.\//, ''));
+const OUTPUT_JSON = join(PROJECT_ROOT, appConfig.outputJsonPath.replace(/^\.\//, ''));
 
 const MODEL_DISPLAY_NAMES: Record<string, string> = {
 	xiaomi: 'xiaomi/mimo-v2-flash:free',
@@ -23,6 +26,14 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
 };
 
 export const load: PageServerLoad = async () => {
+	// Validate environment on server load
+	try {
+		validateEnvironment();
+	} catch (error) {
+		console.error('Environment validation failed:', error);
+		// Don't throw - let the app load but show error in UI if needed
+	}
+
 	const form = await superValidate(zod(evalFormSchema as any));
 	return { form };
 };
@@ -248,28 +259,28 @@ async function getPreviewInfo(formData: EvalFormSchema): Promise<EvalPreview> {
 			testCount = 5;
 			modelCount = 1;
 			models = ['xiaomi'];
-			timeEstimate = 25;
+			timeEstimate = testCount * appConfig.avgSecondsPerTest;
 			description = 'Quick smoke test - 5 tests, fastest model';
 			break;
 		case 'model':
-			testCount = 236;
+			testCount = allTests.length || 236;
 			modelCount = 1;
 			models = formData.modelName ? [formData.modelName] : [];
-			timeEstimate = testCount * 5;
+			timeEstimate = testCount * appConfig.avgSecondsPerTest;
 			description = `All tests against ${formData.modelName}`;
 			break;
 		case 'full':
-			testCount = 236;
+			testCount = allTests.length || 236;
 			modelCount = 4;
 			models = ['xiaomi', 'gemini', 'gpt-oss-20b', 'gpt-oss-120b'];
-			timeEstimate = testCount * modelCount * 5;
+			timeEstimate = testCount * modelCount * appConfig.avgSecondsPerTest;
 			description = 'Full suite - all tests, all models';
 			break;
 		case 'pattern':
 			testCount = 10; // Estimate - we'd need to actually filter to know
 			modelCount = 4;
 			models = ['xiaomi', 'gemini', 'gpt-oss-20b', 'gpt-oss-120b'];
-			timeEstimate = testCount * modelCount * 5;
+			timeEstimate = testCount * modelCount * appConfig.avgSecondsPerTest;
 			description = `Tests matching pattern '${formData.pattern}'`;
 			break;
 		case 'first':
@@ -278,7 +289,7 @@ async function getPreviewInfo(formData: EvalFormSchema): Promise<EvalPreview> {
 			models = formData.modelName
 				? [formData.modelName]
 				: ['xiaomi', 'gemini', 'gpt-oss-20b', 'gpt-oss-120b'];
-			timeEstimate = testCount * modelCount * 5;
+			timeEstimate = testCount * modelCount * appConfig.avgSecondsPerTest;
 			description = `First ${testCount} tests`;
 			if (formData.modelName) {
 				description += `, ${formData.modelName} model`;
@@ -288,12 +299,12 @@ async function getPreviewInfo(formData: EvalFormSchema): Promise<EvalPreview> {
 			testCount = 10; // Estimate
 			modelCount = 4;
 			models = ['xiaomi', 'gemini', 'gpt-oss-20b', 'gpt-oss-120b'];
-			timeEstimate = testCount * modelCount * 5;
+			timeEstimate = testCount * modelCount * appConfig.avgSecondsPerTest;
 			description = 'Retrying failures from last run';
 			break;
 	}
 
-	const estimatedTokens = testCount * modelCount * 1000;
+	const estimatedTokens = testCount * modelCount * appConfig.avgTokensPerTest;
 
 	// Filter tests based on run type
 	let filteredTests = allTests;
@@ -321,6 +332,14 @@ async function getPreviewInfo(formData: EvalFormSchema): Promise<EvalPreview> {
 	};
 }
 
+/**
+ * Sanitizes output to prevent API key leakage
+ */
+function sanitizeOutput(output: string): string {
+	// Filter out potential API keys (OpenRouter format: sk-...)
+	return output.replace(/sk-[a-zA-Z0-9]{32,}/g, '[REDACTED]');
+}
+
 export const actions: Actions = {
 	run: async ({ request }) => {
 		const form = await superValidate(request, zod(evalFormSchema as any));
@@ -339,8 +358,36 @@ export const actions: Actions = {
 			return { form };
 		}
 
-		const commandArgs = buildCommandArgs(form.data as EvalFormSchema);
+		// Validate API key exists before spawning
+		if (!process.env.OPENROUTER_API_KEY) {
+			return {
+				form,
+				result: {
+					success: false,
+					error: 'API key not configured. Please check server environment variables.'
+				}
+			};
+		}
+
+		// Check if we can start a new evaluation
+		if (!evalManager.canStartNew()) {
+			return {
+				form,
+				result: {
+					success: false,
+					error: `Maximum concurrent evaluations (${appConfig.maxConcurrentEvaluations}) reached. Please wait for current evaluations to complete.`
+				}
+			};
+		}
+
+		const formData = form.data as EvalFormSchema;
+		const commandArgs = buildCommandArgs(formData);
 		const scriptPath = join(PROJECT_ROOT, 'scripts', 'run-eval.ts');
+		const runType = formData.runType;
+		const timeoutMs =
+			appConfig.evaluationTimeouts[runType as keyof typeof appConfig.evaluationTimeouts] ||
+			appConfig.evaluationTimeouts.full;
+		const evalId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
 		return new Promise((resolve) => {
 			const child = spawn('tsx', [scriptPath, ...commandArgs], {
@@ -349,31 +396,38 @@ export const actions: Actions = {
 				stdio: ['ignore', 'pipe', 'pipe']
 			});
 
-			let stdout = '';
-			let stderr = '';
-
-			// Set a timeout (30 minutes max for full suite)
-			const timeout = setTimeout(() => {
+			// Register with eval manager
+			try {
+				evalManager.register(evalId, child, commandArgs.join(' '), timeoutMs);
+			} catch (error) {
 				child.kill();
 				resolve({
 					form,
 					result: {
 						success: false,
-						error: 'Evaluation timed out after 30 minutes'
+						error: error instanceof Error ? error.message : 'Failed to register evaluation'
 					}
 				});
-			}, 30 * 60 * 1000);
+				return;
+			}
+
+			let stdout = '';
+			let stderr = '';
 
 			child.stdout?.on('data', (data) => {
-				stdout += data.toString();
+				const output = data.toString();
+				const sanitized = sanitizeOutput(output);
+				stdout += sanitized;
 			});
 
 			child.stderr?.on('data', (data) => {
-				stderr += data.toString();
+				const output = data.toString();
+				const sanitized = sanitizeOutput(output);
+				stderr += sanitized;
 			});
 
 			child.on('close', (code) => {
-				clearTimeout(timeout);
+				evalManager.unregister(evalId);
 				const results = parseResults();
 
 				if (code !== 0) {
@@ -381,7 +435,7 @@ export const actions: Actions = {
 						form,
 						result: {
 							success: false,
-							error: stderr || `Process exited with code ${code}`
+							error: sanitizeOutput(stderr) || `Process exited with code ${code}`
 						}
 					});
 					return;
@@ -397,7 +451,7 @@ export const actions: Actions = {
 			});
 
 			child.on('error', (error) => {
-				clearTimeout(timeout);
+				evalManager.unregister(evalId);
 				resolve({
 					form,
 					result: {
@@ -410,20 +464,15 @@ export const actions: Actions = {
 	},
 	
 	preview: async ({ request }) => {
-		console.log('=== PREVIEW ACTION CALLED ===');
 		const form = await superValidate(request, zod(evalFormSchema as any));
-		console.log('Form data:', form.data);
-		console.log('Form valid:', form.valid);
 
 		if (!form.valid) {
-			console.log('Form validation failed:', form.errors);
 			return { form };
 		}
 
 		// Additional custom validation
 		const validationErrors = validateEvalForm(form.data as EvalFormSchema);
 		if (validationErrors) {
-			console.log('Custom validation errors:', validationErrors);
 			Object.entries(validationErrors).forEach(([field, msgs]) => {
 				(form.errors as any)[field] = msgs;
 			});
@@ -432,7 +481,6 @@ export const actions: Actions = {
 		}
 
 		const preview = await getPreviewInfo(form.data as EvalFormSchema);
-		console.log('Generated preview:', preview);
 
 		return {
 			form,

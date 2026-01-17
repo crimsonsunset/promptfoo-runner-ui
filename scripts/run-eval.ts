@@ -12,13 +12,15 @@ import { readFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { config as loadEnv } from 'dotenv';
+import { appConfig } from '../app.config.js';
+import { validateEnvironment } from '../src/lib/utils/env-validation.js';
 
 // ES module compatibility
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = join(__dirname, '..');
 const EVALS_DIR = join(PROJECT_ROOT, 'tests/llm-evals');
-const REPORTS_DIR = join(EVALS_DIR, 'reports');
+const REPORTS_DIR = join(PROJECT_ROOT, appConfig.reportsDir.replace(/^\.\//, ''));
 
 // Load .env
 loadEnv({ path: join(PROJECT_ROOT, '.env') });
@@ -300,8 +302,8 @@ async function showDryRun(config: CommandConfig): Promise<void> {
       ? testConfig.tests
       : testConfig.tests.slice(0, config.testCount);
 
-  const estimatedTime = filteredTests.length * config.modelCount * 5; // 5s per test avg
-  const estimatedTokens = filteredTests.length * config.modelCount * 1000; // ~1000 tokens per test
+  const estimatedTime = filteredTests.length * config.modelCount * appConfig.avgSecondsPerTest;
+  const estimatedTokens = filteredTests.length * config.modelCount * appConfig.avgTokensPerTest;
 
   console.log(`\nDRY RUN: ${config.description}`);
   console.log('━'.repeat(60));
@@ -309,7 +311,7 @@ async function showDryRun(config: CommandConfig): Promise<void> {
   console.log(`  Tests:           ${filteredTests.length} of ${testConfig.totalTests}`);
   console.log(`  Models:          ${config.modelCount} (${config.models.map((m) => MODEL_DISPLAY_NAMES[m]).join(', ')})`);
   console.log(`  Cache:           ${config.filters.includes('--no-cache') ? 'Disabled' : 'Enabled'}`);
-  console.log(`  Estimated Time:  ~${estimatedTime}s (5s per test avg)`);
+  console.log(`  Estimated Time:  ~${estimatedTime}s (${appConfig.avgSecondsPerTest}s per test avg)`);
   console.log(`  Estimated Cost:  $0.00 (free tier)`);
   console.log(`  Total Tokens:    ~${estimatedTokens.toLocaleString()} (est)`);
   console.log('\n' + '━'.repeat(60) + '\n');
@@ -451,8 +453,15 @@ function listRecentReports(limit = 5): string[] {
 /**
  * Parse and show results summary
  */
+/**
+ * Sanitizes output to prevent API key leakage
+ */
+function sanitizeOutput(output: string): string {
+  return output.replace(/sk-[a-zA-Z0-9]{32,}/g, '[REDACTED]');
+}
+
 function showResultsSummary(htmlOutput?: string): void {
-  const outputPath = join(EVALS_DIR, 'output.json');
+  const outputPath = join(PROJECT_ROOT, appConfig.outputJsonPath.replace(/^\.\//, ''));
   if (!existsSync(outputPath)) {
     console.log('\n⚠️  No output.json found - evaluation may have failed\n');
     return;
@@ -633,6 +642,15 @@ Examples:
  * Main execution
  */
 async function main(): Promise<void> {
+  // Validate environment before proceeding
+  try {
+    validateEnvironment();
+  } catch (error) {
+    console.error('❌ Environment validation failed:');
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+
   const { command, args, flags } = parseArgs();
 
   // Handle special commands

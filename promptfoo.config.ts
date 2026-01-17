@@ -4,6 +4,7 @@
  */
 
 import type { UnifiedConfig, TestCase } from 'promptfoo';
+import { getOpenRouterApiKey } from './src/lib/utils/env-validation.js';
 
 // Sample test scenarios
 const scenarios = [
@@ -73,7 +74,7 @@ const config: UnifiedConfig = {
     options: {
       provider: {
         config: {
-          apiKey: process.env.OPENROUTER_API_KEY
+          apiKey: getOpenRouterApiKey()
         }
       }
     }
