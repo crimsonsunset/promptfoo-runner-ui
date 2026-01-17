@@ -4,9 +4,9 @@
 	import {
 		evalFormSchema,
 		type EvalFormSchema,
-		MODEL_OPTIONS,
-		validateEvalForm
+		MODEL_OPTIONS
 	} from '$lib/schemas/eval-form';
+	import { getModelDisplayName } from '$lib/constants/models';
 	import type { PageData } from './$types';
 	import type { EvalPreview, EvalResult } from '$lib/types/eval';
 	import EvalPreviewComponent from '$lib/components/EvalPreview.svelte';
@@ -25,17 +25,6 @@
 	} = superForm<EvalFormSchema>(data.form as SuperValidated<EvalFormSchema>, {
 		validators: zodClient(evalFormSchema as any),
 		resetForm: false,
-		onUpdate: ({ form }) => {
-			if (form.valid) {
-				const validationErrors = validateEvalForm(form.data);
-				if (validationErrors) {
-					Object.entries(validationErrors).forEach(([field, msgs]) => {
-						(form.errors as any)[field] = msgs;
-					});
-					form.valid = false;
-				}
-			}
-		},
 		onResult: ({ result }) => {
 			if (result.type === 'success') {
 				if (result.data?.result) {
@@ -128,15 +117,6 @@
 		$form.noHtml = appConfig.defaultNoHtml;
 	}
 
-	function getModelDisplayName(model: string): string {
-		const displayNames: Record<string, string> = {
-			xiaomi: 'xiaomi/mimo-v2-flash:free',
-			gemini: 'google/gemini-2.0-flash-exp:free',
-			'gpt-oss-20b': 'openai/gpt-oss-20b:free',
-			'gpt-oss-120b': 'openai/gpt-oss-120b:free'
-		};
-		return displayNames[model] || model;
-	}
 </script>
 
 <svelte:head>

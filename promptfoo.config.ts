@@ -5,6 +5,7 @@
 
 import type { UnifiedConfig, TestCase } from 'promptfoo';
 import { getOpenRouterApiKey } from './src/lib/utils/env-validation.js';
+import { MODEL_PROVIDERS } from './src/lib/constants/models.js';
 
 // Sample test scenarios
 const scenarios = [
@@ -61,12 +62,7 @@ const config: UnifiedConfig = {
 
   prompts: ['{{prompt}}'],
 
-  providers: [
-    'openrouter:xiaomi/mimo-v2-flash:free',
-    'openrouter:google/gemini-2.0-flash-exp:free',
-    'openrouter:openai/gpt-oss-20b:free',
-    'openrouter:openai/gpt-oss-120b:free'
-  ],
+  providers: MODEL_PROVIDERS,
 
   outputPath: './tests/llm-evals/output.json',
 

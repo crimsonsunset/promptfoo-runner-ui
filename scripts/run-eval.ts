@@ -14,6 +14,12 @@ import { fileURLToPath } from 'url';
 import { config as loadEnv } from 'dotenv';
 import { appConfig } from '../app.config.js';
 import { validateEnvironment } from '../src/lib/utils/env-validation.js';
+import {
+	MODEL_MAP,
+	MODEL_DISPLAY_NAMES,
+	ALL_MODELS,
+	type ModelOption
+} from '../src/lib/constants/models.js';
 
 // ES module compatibility
 const __filename = fileURLToPath(import.meta.url);
@@ -24,23 +30,6 @@ const REPORTS_DIR = join(PROJECT_ROOT, appConfig.reportsDir.replace(/^\.\//, '')
 
 // Load .env
 loadEnv({ path: join(PROJECT_ROOT, '.env') });
-
-// Model name mappings
-const MODEL_MAP: Record<string, string> = {
-  xiaomi: 'xiaomi',
-  gemini: 'gemini',
-  'gpt-oss-20b': 'gpt-oss-20b',
-  'gpt-oss-120b': 'gpt-oss-120b',
-};
-
-const MODEL_DISPLAY_NAMES: Record<string, string> = {
-  xiaomi: 'xiaomi/mimo-v2-flash:free',
-  gemini: 'google/gemini-2.0-flash-exp:free',
-  'gpt-oss-20b': 'openai/gpt-oss-20b:free',
-  'gpt-oss-120b': 'openai/gpt-oss-120b:free',
-};
-
-const ALL_MODELS = ['xiaomi', 'gemini', 'gpt-oss-20b', 'gpt-oss-120b'];
 
 interface CommandConfig {
   filters: string[];
@@ -160,7 +149,7 @@ function buildCommandConfig(
         process.exit(1);
       }
 
-      const modelName = args[0].toLowerCase();
+      const modelName = args[0].toLowerCase() as ModelOption;
       if (!MODEL_MAP[modelName]) {
         console.error(`❌ Error: Unknown model "${args[0]}"`);
         console.error('\nAvailable models:');
@@ -212,7 +201,7 @@ function buildCommandConfig(
 
       // Check if model is also specified
       if (args[1] === 'model' && args[2]) {
-        const modelName2 = args[2].toLowerCase();
+        const modelName2 = args[2].toLowerCase() as ModelOption;
         if (!MODEL_MAP[modelName2]) {
           console.error(`❌ Error: Unknown model "${args[2]}"`);
           process.exit(1);
