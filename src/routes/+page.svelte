@@ -11,7 +11,7 @@
 	import type { EvalPreview, EvalResult } from '$lib/types/eval';
 	import EvalPreviewComponent from '$lib/components/EvalPreview.svelte';
 	import { debounce } from '$lib/utils/debounce';
-	import { appConfig } from '../../app.config.js';
+	import { appConfig } from '$lib/constants/app.config.js';
 
 	let { data = $bindable() }: { data: PageData } = $props();
 

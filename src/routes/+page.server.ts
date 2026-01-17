@@ -3,23 +3,26 @@ import { zod } from 'sveltekit-superforms/adapters';
 import { evalFormSchema, type EvalFormSchema } from '$lib/schemas/eval-form';
 import { spawn } from 'child_process';
 import { join } from 'path';
+import { config as loadEnv } from 'dotenv';
 import type { Actions, PageServerLoad } from './$types';
 import type { EvalResult, EvalPreview } from '$lib/types/eval';
-import { appConfig } from '../../app.config.js';
-import { validateEnvironment } from '$lib/utils/env-validation';
+import { appConfig } from '$lib/constants/app.config.js';
 import { evalManager } from '$lib/server/eval-manager';
 import { evaluationService } from '$lib/server/services/evaluation.service';
 import { ErrorCodes, createEvaluationError } from '$lib/utils/error-handling';
-import { PROJECT_ROOT, SCRIPTS_DIR } from '$lib/constants/app.constants';
+import { PROJECT_ROOT, SCRIPTS_DIR, ENV_FILE_PATH } from '$lib/constants/app.constants.server.js';
 import { EXECUTABLES } from '$lib/constants/cli.constants';
 
+// Load .env file explicitly (SvelteKit should do this automatically, but ensure it's loaded)
+loadEnv({ path: ENV_FILE_PATH });
+
 export const load: PageServerLoad = async () => {
-	// Validate environment on server load
-	try {
-		validateEnvironment();
-	} catch (error) {
-		console.error('Environment validation failed:', error);
-		// Don't throw - let the app load but show error in UI if needed
+	// Validate environment on server load (non-blocking)
+	// Only warn in dev - actual validation happens when running evaluations
+	if (!process.env.OPENROUTER_API_KEY) {
+		console.warn(
+			'⚠️  OPENROUTER_API_KEY not found. Create a .env file with your API key to run evaluations.'
+		);
 	}
 
 	const form = await superValidate(zod(evalFormSchema as any));

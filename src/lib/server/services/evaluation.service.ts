@@ -9,7 +9,7 @@ import { join } from 'path';
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import type { EvalResult, EvalPreview } from '$lib/types/eval';
 import type { EvalFormSchema } from '$lib/schemas/eval-form';
-import { appConfig } from '../../../../app.config.js';
+import { appConfig } from '$lib/constants/app.config.js';
 import { estimateRunConfiguration, getModelsForRunType } from '$lib/utils/estimations';
 import { MODEL_DISPLAY_NAMES } from '$lib/constants/models.constants';
 import { ErrorCodes, createEvaluationError } from '$lib/utils/error-handling';
@@ -18,11 +18,13 @@ import {
 	REPORTS_DIR,
 	OUTPUT_JSON_PATH,
 	SCRIPTS_DIR,
-	PROMPTFOO_CONFIG_PATH,
+	PROMPTFOO_CONFIG_PATH
+} from '$lib/constants/app.constants.server.js';
+import {
 	FILE_EXTENSIONS,
 	PROMPT_MARKERS,
 	PARSING_PATTERNS
-} from '$lib/constants/app.constants';
+} from '$lib/constants/app.constants.js';
 import { EXECUTABLES, COMMANDS, CLI_FLAGS } from '$lib/constants/cli.constants';
 import { UI_DEFAULTS } from '$lib/constants/ui.constants';
 

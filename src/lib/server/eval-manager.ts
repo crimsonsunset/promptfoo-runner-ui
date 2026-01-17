@@ -1,5 +1,5 @@
 import type { ChildProcess } from 'child_process';
-import { appConfig } from '../../../app.config.js';
+import { appConfig } from '$lib/constants/app.config.js';
 
 interface ActiveEvaluation {
 	id: string;

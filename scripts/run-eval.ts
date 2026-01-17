@@ -12,25 +12,24 @@ import { readFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { config as loadEnv } from 'dotenv';
-import { appConfig } from '../app.config.js';
+import { appConfig } from '../src/lib/constants/app.config.js';
 import { validateEnvironment } from '../src/lib/utils/env-validation.js';
 import {
 	MODEL_MAP,
 	MODEL_DISPLAY_NAMES,
 	ALL_MODELS,
 	type ModelOption
-} from '../src/lib/constants/models.js';
+} from '../src/lib/constants/models.constants.js';
 import {
 	PROJECT_ROOT,
 	EVALS_DIR,
 	REPORTS_DIR,
 	ENV_FILE_PATH,
 	PROMPTFOO_CONFIG_PATH
-} from '../src/lib/constants/paths.js';
-import { COMMANDS, CLI_FLAGS, EXECUTABLES, PROMPTFOO_ARGS } from '../src/lib/constants/cli.js';
-import { PROMPT_MARKERS, PARSING_PATTERNS } from '../src/lib/constants/parsing.js';
-import { FILE_EXTENSIONS, FILE_NAMES } from '../src/lib/constants/files.js';
-import { TRUNCATION_LIMITS, EMOJIS, STATUS_SYMBOLS, UI_DEFAULTS } from '../src/lib/constants/ui.js';
+} from '../src/lib/constants/app.constants.server.js';
+import { COMMANDS, CLI_FLAGS, EXECUTABLES, PROMPTFOO_ARGS } from '../src/lib/constants/cli.constants.js';
+import { PROMPT_MARKERS, PARSING_PATTERNS, FILE_EXTENSIONS, FILE_NAMES } from '../src/lib/constants/app.constants.js';
+import { TRUNCATION_LIMITS, EMOJIS, STATUS_SYMBOLS, UI_DEFAULTS } from '../src/lib/constants/ui.constants.js';
 
 // Constants imported from centralized location
 

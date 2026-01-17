@@ -5,7 +5,7 @@
 
 import type { UnifiedConfig, TestCase } from 'promptfoo';
 import { getOpenRouterApiKey } from './src/lib/utils/env-validation.js';
-import { MODEL_PROVIDERS } from './src/lib/constants/models.js';
+import { MODEL_PROVIDERS } from './src/lib/constants/models.constants.js';
 
 // Sample test scenarios
 const scenarios = [

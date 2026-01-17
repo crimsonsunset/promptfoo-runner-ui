@@ -2,7 +2,8 @@ import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { REPORTS_DIR, FILE_EXTENSIONS, CONTENT_TYPES } from '$lib/constants/app.constants';
+import { REPORTS_DIR } from '$lib/constants/app.constants.server.js';
+import { FILE_EXTENSIONS, CONTENT_TYPES } from '$lib/constants/app.constants.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const filename = params.filename;
