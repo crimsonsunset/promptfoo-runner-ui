@@ -1,17 +1,13 @@
 import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const PROJECT_ROOT = join(__dirname, '..', '..', '..', '..');
-const REPORTS_DIR = join(PROJECT_ROOT, 'tests/llm-evals/reports');
+import { REPORTS_DIR } from '$lib/constants/paths';
+import { FILE_EXTENSIONS, CONTENT_TYPES } from '$lib/constants/files';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const filename = params.filename;
-	if (!filename || !filename.endsWith('.html')) {
+	if (!filename || !filename.endsWith(FILE_EXTENSIONS.HTML)) {
 		throw error(400, 'Invalid filename');
 	}
 
@@ -24,7 +20,7 @@ export const GET: RequestHandler = async ({ params }) => {
 		const content = readFileSync(filePath, 'utf-8');
 		return new Response(content, {
 			headers: {
-				'Content-Type': 'text/html'
+				'Content-Type': CONTENT_TYPES.HTML
 			}
 		});
 	} catch (err) {

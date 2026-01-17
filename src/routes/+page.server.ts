@@ -2,8 +2,7 @@ import { superValidate } from 'sveltekit-superforms/server';
 import { zod } from 'sveltekit-superforms/adapters';
 import { evalFormSchema, type EvalFormSchema } from '$lib/schemas/eval-form';
 import { spawn } from 'child_process';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import type { Actions, PageServerLoad } from './$types';
 import type { EvalResult, EvalPreview } from '$lib/types/eval';
 import { appConfig } from '../../app.config.js';
@@ -11,10 +10,8 @@ import { validateEnvironment } from '$lib/utils/env-validation';
 import { evalManager } from '$lib/server/eval-manager';
 import { evaluationService } from '$lib/server/services/evaluation.service';
 import { ErrorCodes, createEvaluationError } from '$lib/utils/error-handling';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const PROJECT_ROOT = join(__dirname, '..', '..');
+import { PROJECT_ROOT, SCRIPTS_DIR } from '$lib/constants/paths';
+import { EXECUTABLES } from '$lib/constants/cli';
 
 export const load: PageServerLoad = async () => {
 	// Validate environment on server load
@@ -73,7 +70,7 @@ export const actions: Actions = {
 
 		const formData = form.data as EvalFormSchema;
 		const commandArgs = evaluationService.buildCommandArgs(formData);
-		const scriptPath = join(PROJECT_ROOT, 'scripts', 'run-eval.ts');
+		const scriptPath = join(SCRIPTS_DIR, 'run-eval.ts');
 		const runType = formData.runType;
 		const timeoutMs =
 			appConfig.evaluationTimeouts[runType as keyof typeof appConfig.evaluationTimeouts] ||
@@ -81,7 +78,7 @@ export const actions: Actions = {
 		const evalId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
 		return new Promise((resolve) => {
-			const child = spawn('tsx', [scriptPath, ...commandArgs], {
+			const child = spawn(EXECUTABLES.TSX, [scriptPath, ...commandArgs], {
 				cwd: PROJECT_ROOT,
 				env: { ...process.env },
 				stdio: ['ignore', 'pipe', 'pipe']

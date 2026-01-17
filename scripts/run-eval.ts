@@ -20,16 +20,22 @@ import {
 	ALL_MODELS,
 	type ModelOption
 } from '../src/lib/constants/models.js';
+import {
+	PROJECT_ROOT,
+	EVALS_DIR,
+	REPORTS_DIR,
+	ENV_FILE_PATH,
+	PROMPTFOO_CONFIG_PATH
+} from '../src/lib/constants/paths.js';
+import { COMMANDS, CLI_FLAGS, EXECUTABLES, PROMPTFOO_ARGS } from '../src/lib/constants/cli.js';
+import { PROMPT_MARKERS, PARSING_PATTERNS } from '../src/lib/constants/parsing.js';
+import { FILE_EXTENSIONS, FILE_NAMES } from '../src/lib/constants/files.js';
+import { TRUNCATION_LIMITS, EMOJIS, STATUS_SYMBOLS, UI_DEFAULTS } from '../src/lib/constants/ui.js';
 
-// ES module compatibility
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const PROJECT_ROOT = join(__dirname, '..');
-const EVALS_DIR = join(PROJECT_ROOT, 'tests/llm-evals');
-const REPORTS_DIR = join(PROJECT_ROOT, appConfig.reportsDir.replace(/^\.\//, ''));
+// Constants imported from centralized location
 
 // Load .env
-loadEnv({ path: join(PROJECT_ROOT, '.env') });
+loadEnv({ path: ENV_FILE_PATH });
 
 interface CommandConfig {
   filters: string[];
@@ -67,13 +73,13 @@ function parseArgs(): {
   while (i < args.length) {
     const arg = args[i];
 
-    if (arg === 'dry-run') {
+    if (arg === COMMANDS.DRY_RUN) {
       flags.dryRun = true;
-    } else if (arg === '--no-cache') {
+    } else if (arg === CLI_FLAGS.NO_CACHE) {
       flags.noCache = true;
-    } else if (arg === '--verbose' || arg === '-v') {
+    } else if (arg === CLI_FLAGS.VERBOSE || arg === CLI_FLAGS.VERBOSE_SHORT) {
       flags.verbose = true;
-    } else if (arg === '--no-html') {
+    } else if (arg === CLI_FLAGS.NO_HTML) {
       flags.noHtml = true;
     } else if (!arg.startsWith('--')) {
       commandArgs.push(arg);
@@ -114,7 +120,7 @@ function generateHtmlPath(command: string, noHtml: boolean): string | undefined 
 
   const timestamp = generateTimestamp();
   const sanitizedCommand = command.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-  return join(REPORTS_DIR, `eval-${sanitizedCommand}-${timestamp}.html`);
+  return join(REPORTS_DIR, `eval-${sanitizedCommand}-${timestamp}${FILE_EXTENSIONS.HTML}`);
 }
 
 /**
@@ -132,17 +138,17 @@ function buildCommandConfig(
   const htmlOutput = generateHtmlPath(command, flags.noHtml);
 
   switch (command) {
-    case 'smoke':
-      filters.push('--filter-first-n', '5');
-      filters.push('--filter-providers', 'xiaomi');
+    case COMMANDS.SMOKE:
+      filters.push(CLI_FLAGS.FILTER_FIRST_N, '5');
+      filters.push(CLI_FLAGS.FILTER_PROVIDERS, 'xiaomi');
       description = 'Quick smoke test - 5 tests, fastest model';
       testCount = 5;
       models = ['xiaomi'];
       break;
 
-    case 'model':
+    case COMMANDS.MODEL:
       if (!args[0]) {
-        console.error('❌ Error: Model name required');
+        console.error(`${EMOJIS.ERROR} Error: Model name required`);
         console.error('\nAvailable models:');
         ALL_MODELS.forEach((m) => console.error(`  • ${m}`));
         console.error(`\nExample: npm run eval:run -- model xiaomi`);
@@ -151,62 +157,62 @@ function buildCommandConfig(
 
       const modelName = args[0].toLowerCase() as ModelOption;
       if (!MODEL_MAP[modelName]) {
-        console.error(`❌ Error: Unknown model "${args[0]}"`);
+        console.error(`${EMOJIS.ERROR} Error: Unknown model "${args[0]}"`);
         console.error('\nAvailable models:');
         ALL_MODELS.forEach((m) => console.error(`  • ${m}`));
         console.error(`\nExample: npm run eval:run -- model ${ALL_MODELS[0]}`);
         process.exit(1);
       }
 
-      filters.push('--filter-providers', MODEL_MAP[modelName]);
+      filters.push(CLI_FLAGS.FILTER_PROVIDERS, MODEL_MAP[modelName]);
       description = `All tests against ${modelName}`;
       models = [modelName];
       break;
 
-    case 'full':
+    case COMMANDS.FULL:
       description = 'Full suite - all tests, all models';
       break;
 
-    case 'pattern':
+    case COMMANDS.PATTERN:
       if (!args[0]) {
-        console.error('❌ Error: Pattern required');
+        console.error(`${EMOJIS.ERROR} Error: Pattern required`);
         console.error('\nExample: npm run eval:run -- pattern "incomplete"');
         process.exit(1);
       }
-      filters.push('--filter-pattern', args[0]);
+      filters.push(CLI_FLAGS.FILTER_PATTERN, args[0]);
       description = `Tests matching pattern '${args[0]}'`;
       break;
 
-    case 'retry':
-      const outputPath = join(EVALS_DIR, 'output.json');
+    case COMMANDS.RETRY:
+      const outputPath = join(EVALS_DIR, FILE_NAMES.OUTPUT_JSON);
       if (!existsSync(outputPath)) {
-        console.error('❌ Error: No previous evaluation found');
+        console.error(`${EMOJIS.ERROR} Error: No previous evaluation found`);
         console.error(`Expected: ${outputPath}`);
         process.exit(1);
       }
-      filters.push('--retry-errors');
+      filters.push(CLI_FLAGS.RETRY_ERRORS);
       description = 'Retrying failures from last run';
       break;
 
-    case 'first':
+    case COMMANDS.FIRST:
       if (!args[0] || isNaN(Number(args[0]))) {
-        console.error('❌ Error: Number required');
+        console.error(`${EMOJIS.ERROR} Error: Number required`);
         console.error('\nExample: npm run eval:run -- first 10');
         process.exit(1);
       }
       const count = Number(args[0]);
-      filters.push('--filter-first-n', count.toString());
+      filters.push(CLI_FLAGS.FILTER_FIRST_N, count.toString());
       description = `First ${count} tests`;
       testCount = count;
 
       // Check if model is also specified
-      if (args[1] === 'model' && args[2]) {
+      if (args[1] === COMMANDS.MODEL && args[2]) {
         const modelName2 = args[2].toLowerCase() as ModelOption;
         if (!MODEL_MAP[modelName2]) {
-          console.error(`❌ Error: Unknown model "${args[2]}"`);
+          console.error(`${EMOJIS.ERROR} Error: Unknown model "${args[2]}"`);
           process.exit(1);
         }
-        filters.push('--filter-providers', MODEL_MAP[modelName2]);
+        filters.push(CLI_FLAGS.FILTER_PROVIDERS, MODEL_MAP[modelName2]);
         models = [modelName2];
         description += `, ${modelName2} model`;
       }
@@ -217,22 +223,22 @@ function buildCommandConfig(
       process.exit(0);
 
     default:
-      console.error(`❌ Error: Unknown command "${command}"`);
+      console.error(`${EMOJIS.ERROR} Error: Unknown command "${command}"`);
       showUsage();
       process.exit(1);
   }
 
   if (flags.noCache) {
-    filters.push('--no-cache');
+    filters.push(CLI_FLAGS.NO_CACHE);
   }
 
   if (flags.verbose) {
-    filters.push('-v');
+    filters.push(CLI_FLAGS.VERBOSE_SHORT);
   }
 
   // Add HTML output path if not disabled
   if (htmlOutput) {
-    filters.push('--output', htmlOutput);
+    filters.push(CLI_FLAGS.OUTPUT, htmlOutput);
   }
 
   return {
@@ -257,9 +263,8 @@ async function loadTestConfig(): Promise<{
   totalTests: number;
 }> {
   // Dynamically import the config from project root
-  const configPath = join(PROJECT_ROOT, 'promptfoo.config.ts');
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const configModule = await import(`file://${configPath}`);
+  const configModule = await import(`file://${PROMPTFOO_CONFIG_PATH}`);
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
   const config = configModule.default;
 
@@ -325,9 +330,11 @@ async function showDryRun(config: CommandConfig): Promise<void> {
       }
     } else {
       // Generic prompt - show first few lines
-      const previewLines = promptLines.slice(0, 3);
+      const previewLines = promptLines.slice(0, TRUNCATION_LIMITS.PROMPT_MAX_LINES);
       previewLines.forEach(line => {
-        const truncated = line.length > 80 ? line.substring(0, 77) + '...' : line;
+        const truncated = line.length > TRUNCATION_LIMITS.PROMPT_LINE_LENGTH 
+          ? line.substring(0, TRUNCATION_LIMITS.PROMPT_LINE_PREVIEW) + '...' 
+          : line;
         console.log(`  ${truncated}`);
       });
       if (promptLines.length > 3) {
@@ -368,8 +375,8 @@ function showPreExecutionBanner(config: CommandConfig): void {
  */
 function executePromptfoo(config: CommandConfig): Promise<void> {
   return new Promise((resolve, reject) => {
-    const cmd = ['eval', '-c', 'promptfoo.config.ts', ...config.filters];
-    const child = spawn('npx', ['promptfoo', ...cmd], {
+    const cmd = [PROMPTFOO_ARGS.EVAL, PROMPTFOO_ARGS.CONFIG, PROMPTFOO_ARGS.CONFIG_FILE, ...config.filters];
+    const child = spawn(EXECUTABLES.NPX, [EXECUTABLES.PROMPTFOO, ...cmd], {
       cwd: PROJECT_ROOT,
       stdio: 'inherit',
       shell: true,
@@ -421,7 +428,7 @@ function listRecentReports(limit = 5): string[] {
   }
 
   const files = readdirSync(REPORTS_DIR)
-    .filter((f) => f.endsWith('.html'))
+    .filter((f) => f.endsWith(FILE_EXTENSIONS.HTML))
     .map((f) => ({
       name: f,
       path: join(REPORTS_DIR, f),
@@ -452,7 +459,7 @@ function sanitizeOutput(output: string): string {
 function showResultsSummary(htmlOutput?: string): void {
   const outputPath = join(PROJECT_ROOT, appConfig.outputJsonPath.replace(/^\.\//, ''));
   if (!existsSync(outputPath)) {
-    console.log('\n⚠️  No output.json found - evaluation may have failed\n');
+    console.log(`\n${EMOJIS.WARNING}  No ${FILE_NAMES.OUTPUT_JSON} found - evaluation may have failed\n`);
     return;
   }
 
@@ -525,7 +532,7 @@ function showResultsSummary(htmlOutput?: string): void {
       const errors = providerResults.filter((r: ProviderResult) => r.error).length;
       const total = providerResults.length;
 
-      const status = errors > 0 ? '✗' : failed > 0 ? '⚠' : '✓';
+      const status = errors > 0 ? STATUS_SYMBOLS.ERROR : failed > 0 ? STATUS_SYMBOLS.WARNING : STATUS_SYMBOLS.SUCCESS;
       console.log(`  ${status} ${provider}`);
       console.log(`    • ${passed}/${total} passed`);
 
@@ -540,14 +547,14 @@ function showResultsSummary(htmlOutput?: string): void {
     console.log('\n━'.repeat(30));
     console.log('View Options:');
     if (htmlOutput && existsSync(htmlOutput)) {
-      console.log(`  📊 HTML Report:  ${htmlOutput}`);
+      console.log(`  ${EMOJIS.REPORT} HTML Report:  ${htmlOutput}`);
       console.log('  🌐 Open Report:  npm run eval:report');
     }
-    console.log('  🔍 Web UI:       npm run eval:view');
-    console.log(`  📄 JSON Output:  ${outputPath}`);
+    console.log(`  ${EMOJIS.WEB_UI} Web UI:       npm run eval:view`);
+    console.log(`  ${EMOJIS.JSON_OUTPUT} JSON Output:  ${outputPath}`);
     console.log('');
   } catch {
-    console.log('\n⚠️  Could not parse results summary');
+    console.log(`\n${EMOJIS.WARNING}  Could not parse results summary`);
     console.log(`View output:  ${outputPath}\n`);
   }
 }
@@ -559,13 +566,13 @@ async function handleReportCommand(): Promise<void> {
   const reports = listRecentReports(1);
 
   if (reports.length === 0) {
-    console.log('\n❌ No HTML reports found');
+    console.log(`\n${EMOJIS.ERROR} No HTML reports found`);
     console.log('Generate a report first: npm run eval:run -- smoke\n');
     process.exit(1);
   }
 
   const latestReport = reports[0];
-  console.log('\n📊 Opening latest report...');
+  console.log(`\n${EMOJIS.REPORT} Opening latest report...`);
   console.log(`   ${latestReport}\n`);
 
   await openHtmlReport(latestReport);
@@ -578,12 +585,12 @@ function handleReportsCommand(): void {
   const reports = listRecentReports(10);
 
   if (reports.length === 0) {
-    console.log('\n❌ No HTML reports found');
+    console.log(`\n${EMOJIS.ERROR} No HTML reports found`);
     console.log('Generate a report first: npm run eval:run -- smoke\n');
     process.exit(0);
   }
 
-  console.log('\n📊 Recent HTML Reports:');
+  console.log(`\n${EMOJIS.REPORT} Recent HTML Reports:`);
   console.log('━'.repeat(60));
   reports.forEach((report, idx) => {
     const filename = report.split('/').pop();
@@ -635,7 +642,7 @@ async function main(): Promise<void> {
   try {
     validateEnvironment();
   } catch (error) {
-    console.error('❌ Environment validation failed:');
+    console.error(`${EMOJIS.ERROR} Environment validation failed:`);
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
@@ -643,12 +650,12 @@ async function main(): Promise<void> {
   const { command, args, flags } = parseArgs();
 
   // Handle special commands
-  if (command === 'report') {
+  if (command === COMMANDS.REPORT) {
     await handleReportCommand();
     return;
   }
 
-  if (command === 'reports') {
+  if (command === COMMANDS.REPORTS) {
     handleReportsCommand();
     return;
   }
@@ -688,7 +695,7 @@ async function main(): Promise<void> {
       await openHtmlReport(config.htmlOutput);
     }
   } catch (error) {
-    console.error('\n❌ Evaluation failed:');
+    console.error(`\n${EMOJIS.ERROR} Evaluation failed:`);
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }

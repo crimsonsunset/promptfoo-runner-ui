@@ -20,9 +20,10 @@ import {
 	SCRIPTS_DIR,
 	PROMPTFOO_CONFIG_PATH
 } from '$lib/constants/paths';
-import { EXECUTABLES, COMMANDS } from '$lib/constants/cli';
+import { EXECUTABLES, COMMANDS, CLI_FLAGS } from '$lib/constants/cli';
 import { PROMPT_MARKERS, PARSING_PATTERNS } from '$lib/constants/parsing';
 import { FILE_EXTENSIONS } from '$lib/constants/files';
+import { UI_DEFAULTS } from '$lib/constants/ui';
 
 /**
  * Build command arguments from form data
@@ -42,13 +43,13 @@ function buildCommandArgs(formData: EvalFormSchema): string[] {
 	}
 
 	if (formData.noCache) {
-		args.push('--no-cache');
+		args.push(CLI_FLAGS.NO_CACHE);
 	}
 	if (formData.verbose) {
-		args.push('--verbose');
+		args.push(CLI_FLAGS.VERBOSE);
 	}
 	if (formData.noHtml) {
-		args.push('--no-html');
+		args.push(CLI_FLAGS.NO_HTML);
 	}
 
 	return args;
@@ -58,12 +59,12 @@ function buildCommandArgs(formData: EvalFormSchema): string[] {
  * Parse evaluation results from output.json
  */
 function parseResults(): EvalResult | null {
-	if (!existsSync(OUTPUT_JSON)) {
+	if (!existsSync(OUTPUT_JSON_PATH)) {
 		return null;
 	}
 
 	try {
-		const output = JSON.parse(readFileSync(OUTPUT_JSON, 'utf-8'));
+		const output = JSON.parse(readFileSync(OUTPUT_JSON_PATH, 'utf-8'));
 		const results = output.results || [];
 		const totalTests = results.length;
 		const passedTests = results.filter((r: { success?: boolean }) => r.success).length;
@@ -74,7 +75,7 @@ function parseResults(): EvalResult | null {
 		let htmlReportPath: string | undefined;
 		if (existsSync(REPORTS_DIR)) {
 			const reports = readdirSync(REPORTS_DIR)
-				.filter((f: string) => f.endsWith('.html'))
+				.filter((f: string) => f.endsWith(FILE_EXTENSIONS.HTML))
 				.sort()
 				.reverse();
 			if (reports.length > 0) {
@@ -109,10 +110,10 @@ async function loadTestConfig(args: string[]): Promise<{
 	}>;
 	totalTests: number;
 }> {
-	const scriptPath = join(PROJECT_ROOT, 'scripts', 'run-eval.ts');
+	const scriptPath = join(SCRIPTS_DIR, 'run-eval.ts');
 
 	return new Promise((resolve, reject) => {
-		const child = spawn('tsx', [scriptPath, 'dry-run', ...args], {
+		const child = spawn(EXECUTABLES.TSX, [scriptPath, COMMANDS.DRY_RUN, ...args], {
 			cwd: PROJECT_ROOT,
 			env: { ...process.env },
 			stdio: ['ignore', 'pipe', 'pipe']
@@ -174,20 +175,20 @@ function parseDryRunOutput(output: string): Array<{
 	}> = [];
 
 	// Split by test separator
-	const testBlocks = output.split(/Test #\d+: /);
+	const testBlocks = output.split(PARSING_PATTERNS.TEST_SEPARATOR);
 
 	for (const block of testBlocks.slice(1)) {
 		// Skip first empty split
 		const lines = block.split('\n');
-		const descriptionMatch = lines[0]?.match(/^"(.+)"$/);
+		const descriptionMatch = lines[0]?.match(PARSING_PATTERNS.DESCRIPTION_QUOTED);
 		if (!descriptionMatch) continue;
 
 		const description = descriptionMatch[1];
 
 		// Find prompt info - handle both structured (Venue:/User says:) and generic formats
-		const promptMatch = block.match(/\((\d+) characters total\)/);
-		const venueLine = lines.find((l) => l.trim().startsWith('Venue:'));
-		const userLine = lines.find((l) => l.trim().startsWith('User says:'));
+		const promptMatch = block.match(PARSING_PATTERNS.CHARACTER_COUNT);
+		const venueLine = lines.find((l) => l.trim().startsWith(PROMPT_MARKERS.VENUE));
+		const userLine = lines.find((l) => l.trim().startsWith(PROMPT_MARKERS.USER_SAYS));
 
 		const promptLines = [];
 		if (venueLine || userLine) {
@@ -196,7 +197,7 @@ function parseDryRunOutput(output: string): Array<{
 			if (userLine) promptLines.push(userLine.trim());
 		} else {
 			// Generic format - extract lines between "Prompt:" and character count
-			const promptStart = block.indexOf('Prompt:');
+			const promptStart = block.indexOf(PROMPT_MARKERS.PROMPT);
 			const charCountLine = block.indexOf('(', promptStart);
 			if (promptStart !== -1 && charCountLine !== -1) {
 				const promptSection = block.substring(promptStart, charCountLine);
@@ -214,19 +215,19 @@ function parseDryRunOutput(output: string): Array<{
 		const prompt = promptLines.join('\n');
 
 		// Find assertion count
-		const assertMatch = block.match(/Assertions \((\d+)\):/);
+		const assertMatch = block.match(PARSING_PATTERNS.ASSERTION_COUNT);
 		const assertionCount = assertMatch ? parseInt(assertMatch[1]) : 0;
 
 		// Build assertions array
 		const assertions: Array<{ description: string }> = [];
 		if (assertionCount > 0) {
 			// Extract assertion descriptions from the block
-			const assertionSection = block.substring(block.indexOf('Assertions'));
+			const assertionSection = block.substring(block.indexOf(PROMPT_MARKERS.ASSERTIONS));
 			const assertionLines = assertionSection.split('\n').slice(1); // Skip "Assertions (N):" line
 
 			for (let i = 0; i < assertionCount && i < assertionLines.length; i++) {
 				const line = assertionLines[i].trim();
-				if (line.match(/^\d+\./)) {
+				if (PARSING_PATTERNS.NUMBERED_ASSERTION.test(line)) {
 					assertions.push({
 						description: line.replace(/^\d+\.\s*/, '')
 					});
@@ -248,7 +249,7 @@ function parseDryRunOutput(output: string): Array<{
  * Sanitize output to prevent API key leakage
  */
 function sanitizeOutput(output: string): string {
-	return output.replace(/sk-[a-zA-Z0-9]{32,}/g, '[REDACTED]');
+	return output.replace(PARSING_PATTERNS.API_KEY, UI_DEFAULTS.REDACTED_PLACEHOLDER);
 }
 
 /**

@@ -3,10 +3,12 @@
 
 	let { preview }: { preview: EvalPreview } = $props();
 
+	import { PROMPT_MARKERS } from '$lib/constants/app.constants';
+
 	function extractPromptPreview(prompt: string): { venue?: string; userSays?: string; charCount: number } {
 		const lines = prompt.split('\n');
-		const venueLine = lines.find((l) => l.startsWith('Venue:'));
-		const userLine = lines.find((l) => l.startsWith('User says:'));
+		const venueLine = lines.find((l) => l.startsWith(PROMPT_MARKERS.VENUE));
+		const userLine = lines.find((l) => l.startsWith(PROMPT_MARKERS.USER_SAYS));
 		
 		return {
 			venue: venueLine,
