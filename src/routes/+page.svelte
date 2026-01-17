@@ -231,10 +231,11 @@
 							<!-- Dynamic Fields Based on Run Type -->
 							{#if $form.runType === 'model'}
 								<div class="form-control w-full">
-									<label class="label">
+									<label class="label" for="modelName">
 										<span class="label-text font-semibold">Model</span>
 									</label>
 									<select
+										id="modelName"
 										class="select select-bordered w-full"
 										bind:value={$form.modelName}
 										disabled={isRunning}
@@ -245,17 +246,18 @@
 										{/each}
 									</select>
 									{#if $errors.modelName}
-										<label class="label">
+										<div class="label">
 											<span class="label-text-alt text-error">{$errors.modelName}</span>
-										</label>
+										</div>
 									{/if}
 								</div>
 							{:else if $form.runType === 'pattern'}
 								<div class="form-control w-full">
-									<label class="label">
+									<label class="label" for="pattern">
 										<span class="label-text font-semibold">Pattern (Regex)</span>
 									</label>
 									<input
+										id="pattern"
 										type="text"
 										class="input input-bordered w-full"
 										bind:value={$form.pattern}
@@ -263,17 +265,18 @@
 										disabled={isRunning}
 									/>
 									{#if $errors.pattern}
-										<label class="label">
+										<div class="label">
 											<span class="label-text-alt text-error">{$errors.pattern}</span>
-										</label>
+										</div>
 									{/if}
 								</div>
 							{:else if $form.runType === 'first'}
 								<div class="form-control w-full">
-									<label class="label">
+									<label class="label" for="count">
 										<span class="label-text font-semibold">Count</span>
 									</label>
 									<input
+										id="count"
 										type="number"
 										class="input input-bordered w-full"
 										bind:value={$form.count}
@@ -282,16 +285,17 @@
 										disabled={isRunning}
 									/>
 									{#if $errors.count}
-										<label class="label">
+										<div class="label">
 											<span class="label-text-alt text-error">{$errors.count}</span>
-										</label>
+										</div>
 									{/if}
 								</div>
 								<div class="form-control w-full">
-									<label class="label">
+									<label class="label" for="modelNameOptional">
 										<span class="label-text font-semibold">Model (Optional)</span>
 									</label>
 									<select
+										id="modelNameOptional"
 										class="select select-bordered w-full"
 										bind:value={$form.modelName}
 										disabled={isRunning}
@@ -306,9 +310,9 @@
 
 							<!-- Options Checkboxes -->
 							<div class="form-control space-y-2">
-								<label class="label">
+								<div class="label">
 									<span class="label-text font-semibold">Options</span>
-								</label>
+								</div>
 								<label class="label cursor-pointer">
 									<span class="label-text">Force fresh API calls (--no-cache)</span>
 									<input
