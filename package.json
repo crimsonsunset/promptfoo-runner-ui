@@ -1,0 +1,29 @@
+{
+  "name": "promptfoo-runner-ui",
+  "version": "0.1.0",
+  "description": "Web UI for configuring and running Promptfoo LLM evaluations",
+  "type": "module",
+  "scripts": {
+    "eval:run": "tsx scripts/run-eval.ts",
+    "eval:report": "tsx scripts/run-eval.ts report",
+    "eval:reports": "tsx scripts/run-eval.ts reports"
+  },
+  "keywords": [
+    "promptfoo",
+    "llm",
+    "evaluation",
+    "testing",
+    "ai"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "promptfoo": "^0.120.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}
