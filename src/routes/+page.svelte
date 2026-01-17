@@ -419,7 +419,12 @@
 									>
 										👁 Preview
 									</button>
-									<button type="submit" class="btn btn-primary btn-lg flex-[2]" disabled={isRunning}>
+									<button
+										type="submit"
+										formaction="?/run"
+										class="btn btn-primary btn-lg flex-[2]"
+										disabled={isRunning}
+									>
 										{#if isRunning}
 											<span class="loading loading-spinner loading-sm"></span>
 											Running Evaluation...

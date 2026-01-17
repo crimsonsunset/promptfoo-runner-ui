@@ -2,24 +2,36 @@
 	import type { EvalPreview } from '$lib/types/eval';
 
 	let { preview, onClose }: { preview: EvalPreview; onClose: () => void } = $props();
+
+	function extractPromptPreview(prompt: string): { venue?: string; userSays?: string; charCount: number } {
+		const lines = prompt.split('\n');
+		const venueLine = lines.find((l) => l.startsWith('Venue:'));
+		const userLine = lines.find((l) => l.startsWith('User says:'));
+		
+		return {
+			venue: venueLine,
+			userSays: userLine,
+			charCount: prompt.length
+		};
+	}
 </script>
 
-<div class="card bg-base-200 shadow-xl h-fit">
-	<div class="card-body">
-		<div class="flex items-start justify-between mb-4">
+<div class="card bg-base-200 shadow-xl h-fit max-h-[calc(100vh-8rem)] flex flex-col">
+	<div class="card-body flex-1 overflow-hidden flex flex-col">
+		<div class="flex items-start justify-between mb-4 flex-shrink-0">
 			<h2 class="card-title text-2xl">👁 Preview</h2>
 			<button class="btn btn-sm btn-circle btn-ghost" onclick={onClose}>✕</button>
 		</div>
 
-		<div class="space-y-6">
+		<div class="space-y-6 overflow-y-auto flex-1">
 			<!-- Description -->
-			<div>
+			<div class="flex-shrink-0">
 				<h3 class="text-lg font-semibold mb-2">Evaluation Run</h3>
 				<p class="text-sm opacity-80">{preview.description}</p>
 			</div>
 
 			<!-- Key Metrics -->
-			<div class="stats stats-vertical shadow w-full">
+			<div class="stats stats-vertical shadow w-full flex-shrink-0">
 				<div class="stat">
 					<div class="stat-title">Tests</div>
 					<div class="stat-value text-primary">{preview.testCount}</div>
@@ -47,7 +59,7 @@
 			</div>
 
 			<!-- Additional Info -->
-			<div class="space-y-3">
+			<div class="space-y-3 flex-shrink-0">
 				<div class="flex items-center justify-between p-3 bg-base-100 rounded-lg">
 					<span class="font-semibold">Cost</span>
 					<span class="badge badge-success">{preview.estimatedCost}</span>
@@ -62,7 +74,7 @@
 
 			<!-- Warning for Full Suite -->
 			{#if preview.testCount > 100}
-				<div class="alert alert-warning">
+				<div class="alert alert-warning flex-shrink-0">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						class="stroke-current shrink-0 h-6 w-6"
@@ -77,6 +89,60 @@
 						/>
 					</svg>
 					<span class="text-sm">Large evaluation - may take significant time</span>
+				</div>
+			{/if}
+
+			<!-- Test Details -->
+			{#if preview.tests && preview.tests.length > 0}
+				<div class="divider flex-shrink-0">Test Details</div>
+
+				<div class="space-y-4">
+					{#each preview.tests as test, idx}
+						{@const promptPreview = extractPromptPreview(test.prompt)}
+						<div class="card bg-base-100 shadow">
+							<div class="card-body p-4">
+								<h4 class="font-semibold text-sm">
+									Test #{idx + 1}: {test.description}
+								</h4>
+
+								<div class="text-xs space-y-2 mt-2">
+									<!-- Prompt Preview -->
+									<div>
+										<span class="font-semibold opacity-70">Prompt:</span>
+										<div class="ml-2 space-y-1">
+											{#if promptPreview.venue}
+												<div class="opacity-80">{promptPreview.venue}</div>
+											{/if}
+											{#if promptPreview.userSays}
+												<div class="opacity-80">{promptPreview.userSays}</div>
+											{/if}
+											<div class="opacity-60">({promptPreview.charCount} characters total)</div>
+										</div>
+									</div>
+
+									<!-- Assertions -->
+									<div>
+										<span class="font-semibold opacity-70">Assertions ({test.assertionCount}):</span>
+										<div class="ml-2">
+											{test.assertionCount} assertion{test.assertionCount !== 1 ? 's' : ''} will be evaluated
+										</div>
+									</div>
+
+									<!-- Models -->
+									<div>
+										<span class="font-semibold opacity-70">Models to test:</span>
+										<div class="ml-2 opacity-80">
+											{preview.models.join(', ')}
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+
+				<div class="text-center text-sm opacity-70 py-4 flex-shrink-0">
+					Ready to run? Click "Run Evaluation" to execute.
 				</div>
 			{/if}
 		</div>

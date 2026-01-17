@@ -265,8 +265,8 @@ async function loadTestConfig(): Promise<{
   }>;
   totalTests: number;
 }> {
-  // Dynamically import the config
-  const configPath = join(EVALS_DIR, 'promptfoo.config.ts');
+  // Dynamically import the config from project root
+  const configPath = join(PROJECT_ROOT, 'promptfoo.config.ts');
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const configModule = await import(`file://${configPath}`);
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
@@ -324,11 +324,24 @@ async function showDryRun(config: CommandConfig): Promise<void> {
     const userLine = promptLines.find((l) => l.startsWith('User says:'));
 
     console.log('Prompt:');
-    if (venueLine) {
-      console.log(`  ${venueLine}`);
-    }
-    if (userLine) {
-      console.log(`  ${userLine}`);
+    if (venueLine || userLine) {
+      // Structured prompt with Venue/User says
+      if (venueLine) {
+        console.log(`  ${venueLine}`);
+      }
+      if (userLine) {
+        console.log(`  ${userLine}`);
+      }
+    } else {
+      // Generic prompt - show first few lines
+      const previewLines = promptLines.slice(0, 3);
+      previewLines.forEach(line => {
+        const truncated = line.length > 80 ? line.substring(0, 77) + '...' : line;
+        console.log(`  ${truncated}`);
+      });
+      if (promptLines.length > 3) {
+        console.log(`  ... (${promptLines.length - 3} more lines)`);
+      }
     }
     console.log(`  (${test.prompt.length} characters total)`);
 
@@ -366,7 +379,7 @@ function executePromptfoo(config: CommandConfig): Promise<void> {
   return new Promise((resolve, reject) => {
     const cmd = ['eval', '-c', 'promptfoo.config.ts', ...config.filters];
     const child = spawn('npx', ['promptfoo', ...cmd], {
-      cwd: EVALS_DIR,
+      cwd: PROJECT_ROOT,
       stdio: 'inherit',
       shell: true,
     });
